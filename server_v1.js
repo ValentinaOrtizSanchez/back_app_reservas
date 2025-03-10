@@ -5,20 +5,11 @@ const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
 const path = require("path");
 
-const sanitizeHtml = require('sanitize-html');
 const app = express();
 app.use(express.json());
 app.use(cors());
 app.use(express.static("node_modules"));
 app.use(express.static(path.join(__dirname, "public")));
-
-
-
-const sanitizeInput = (value) => sanitizeHtml(value, {
-    allowedTags: [],
-    allowedAttributes: {}
-});
-
 
 const limiter = rateLimit({
     windowMs: 2 * 60 * 1000,
@@ -61,18 +52,14 @@ app.get("/reserva/:id", (req, res) => {
 
 
 app.post("/guardar-reserva", [
-    body('apellidos').trim().escape().isLength({ min: 2, max: 27 }).withMessage('Los apellidos deben tener al menos 2 caracteres')
-        .customSanitizer(sanitizeInput),
-    body('nombres').trim().escape().isLength({ min: 2, max: 20 }).withMessage('El nombre debe tener al menos 2 caracteres')
-        .customSanitizer(sanitizeInput),
+    body('apellidos').trim().escape().isLength({ min: 2, max: 27 }).withMessage('Los apellidos deben tener al menos 2 caracteres'),
+    body('nombres').trim().escape().isLength({ min: 2, max: 20 }).withMessage('El nombre debe tener al menos 2 caracteres'),
     body('email').trim().isEmail().withMessage('Ingresa un email válido'),
     body('telefono').trim().isNumeric().isLength({ min: 10, max: 10 }).withMessage('Número de teléfono debe ser de 10 dígitos'),
-    body('tipo_evento').trim().escape().isLength({ min: 3, max: 10 }).withMessage('Tipo de evento debe ser válido')
-        .customSanitizer(sanitizeInput),
+    body('tipo_evento').trim().escape().isLength({ min: 3, max: 10 }).withMessage('Tipo de evento debe ser válido'),
     body('plan_evento').trim().escape().isIn(['Clasico', 'Premium', 'Golden']).withMessage('Plan de evento no válido'),
     body('cantidad_anticipo').isNumeric().withMessage('Cantidad de anticipo debe ser un número'),
-    body('servicio_adicional').trim().escape().optional()
-        .customSanitizer(sanitizeInput),
+    body('servicio_adicional').trim().escape().optional(),
     body('horas_renta').isIn(['3', '4', '5', '6', '7']).withMessage('Horas de renta no válidas'),
     body('compromiso_pago').isBoolean().withMessage('Compromiso de pago debe ser verdadero o falso')
 ], (req, res) => {
@@ -94,7 +81,6 @@ app.post("/guardar-reserva", [
         res.status(200).json({ mensaje: "Reserva guardada con éxito" });
     });
 });
-
 
 // Ruta para eliminar una reserva
 app.delete("/eliminar-reserva/:id", (req, res) => {
