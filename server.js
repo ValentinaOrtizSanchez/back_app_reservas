@@ -61,18 +61,14 @@ app.get("/reserva/:id", (req, res) => {
 
 
 app.post("/guardar-reserva", [
-    body('apellidos').trim().escape().isLength({ min: 2, max: 27 }).withMessage('Los apellidos deben tener al menos 2 caracteres')
-        .customSanitizer(sanitizeInput),
-    body('nombres').trim().escape().isLength({ min: 2, max: 20 }).withMessage('El nombre debe tener al menos 2 caracteres')
-        .customSanitizer(sanitizeInput),
+    body('apellidos').trim().escape().isLength({ min: 2, max: 27 }).withMessage('Los apellidos deben tener al menos 2 caracteres'),
+    body('nombres').trim().escape().isLength({ min: 2, max: 20 }).withMessage('El nombre debe tener al menos 2 caracteres'),
     body('email').trim().isEmail().withMessage('Ingresa un email válido'),
     body('telefono').trim().isNumeric().isLength({ min: 10, max: 10 }).withMessage('Número de teléfono debe ser de 10 dígitos'),
-    body('tipo_evento').trim().escape().isLength({ min: 3, max: 10 }).withMessage('Tipo de evento debe ser válido')
-        .customSanitizer(sanitizeInput),
+    body('tipo_evento').trim().escape().isLength({ min: 3, max: 10 }).withMessage('Tipo de evento debe ser válido'),
     body('plan_evento').trim().escape().isIn(['Clasico', 'Premium', 'Golden']).withMessage('Plan de evento no válido'),
     body('cantidad_anticipo').isNumeric().withMessage('Cantidad de anticipo debe ser un número'),
-    body('servicio_adicional').trim().escape().optional()
-        .customSanitizer(sanitizeInput),
+    body('servicio_adicional').trim().escape().optional(),
     body('horas_renta').isIn(['3', '4', '5', '6', '7']).withMessage('Horas de renta no válidas'),
     body('compromiso_pago').isBoolean().withMessage('Compromiso de pago debe ser verdadero o falso')
 ], (req, res) => {
@@ -81,12 +77,33 @@ app.post("/guardar-reserva", [
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
-
-    const { apellidos, nombres, email, telefono, tipo_evento, plan_evento, cantidad_anticipo, servicio_adicional, horas_renta, compromiso_pago } = req.body;
+    const sanitizedData = {
+        apellidos: sanitizeInput(req.body.apellidos),
+        nombres: sanitizeInput(req.body.nombres),
+        email: req.body.email, // El email no necesita `sanitizeHtml`
+        telefono: req.body.telefono, // El teléfono tampoco necesita `sanitizeHtml`
+        tipo_evento: sanitizeInput(req.body.tipo_evento),
+        plan_evento: req.body.plan_evento, // No necesita `sanitizeHtml` porque tiene validación fija
+        cantidad_anticipo: req.body.cantidad_anticipo,
+        servicio_adicional: sanitizeInput(req.body.servicio_adicional || ""),
+        horas_renta: req.body.horas_renta,
+        compromiso_pago: req.body.compromiso_pago
+    };
 
     const query = `INSERT INTO reservas (apellidos, nombres, email, telefono, tipo_evento, plan_evento, cantidad_anticipo, servicio_adicional, horas_renta, compromiso_pago) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    connection.query(query, [apellidos, nombres, email, telefono, tipo_evento, plan_evento, cantidad_anticipo, servicio_adicional, horas_renta, compromiso_pago], (err, results) => {
+    connection.query(query, [
+        sanitizedData.apellidos,
+        sanitizedData.nombres,
+        sanitizedData.email,
+        sanitizedData.telefono,
+        sanitizedData.tipo_evento,
+        sanitizedData.plan_evento,
+        sanitizedData.cantidad_anticipo,
+        sanitizedData.servicio_adicional,
+        sanitizedData.horas_renta,
+        sanitizedData.compromiso_pago
+    ], (err, results) => {
         if (err) {
             console.error("Error al guardar la reserva:", err);
             return res.status(500).json({ mensaje: "Error en el servidor" });
@@ -96,7 +113,6 @@ app.post("/guardar-reserva", [
 });
 
 
-// Ruta para eliminar una reserva
 app.delete("/eliminar-reserva/:id", (req, res) => {
     const { id } = req.params;
     const query = "DELETE FROM reservas WHERE id = ?";
